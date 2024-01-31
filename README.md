@@ -2,7 +2,8 @@
 MolMVC: a molecular representation learning framework via multi-view contrastive learning for enhancing drug-related tasks
 
 ## Pretrained model
-You can find our pretrained MolMVC in '/save'. 'downstream_until.py' can help you generate MolMVC molecular representation and finetune_MPP.py can be used as a reference. 
+You can find our pretrained MolMVC in '/save'. 
+'downstream_until.py' can help you generate MolMVC molecular representation and 'finetune_MPP.py' can be used as a reference. 
 
 
 ## Data
