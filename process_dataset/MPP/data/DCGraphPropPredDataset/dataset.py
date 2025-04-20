@@ -187,6 +187,76 @@ class DCGraphPropPredDataset(InMemoryDataset):
             },
             osp.join(self.root, "split", "split_dict.pt"),
         )
+        
+class get_emb_Dataset(InMemoryDataset):
+    def __init__(self, root="dataset_pre", transform=None, pre_transform=None, smiles_list=None):
+        self.smiles_list = smiles_list
+        super().__init__(root, transform, pre_transform, None)
+        self.data, self.slices = torch.load(self.processed_paths[0])
+        
+    @property
+    def processed_file_names(self):
+        return "geometric_data_processed.pt"
+
+    # def download(self):
+    #     pass
+
+    def process(self):
+
+        file_path = self.smiles_list
+        print(file_path)
+
+        df = pd.read_csv(file_path, header=None, names=["ID", "SMILES"])
+
+        data_list = []
+
+        for index, row in df.iterrows():
+            data = DGData()
+            mol = Chem.MolFromSmiles(row['SMILES'])
+            graph = smiles2graphwithface(mol)
+
+            assert len(graph["edge_feat"]) == graph["edge_index"].shape[1]
+            assert len(graph["node_feat"]) == graph["num_nodes"]
+
+            data.__num_nodes__ = int(graph["num_nodes"])
+
+            atom_features_list = []
+            for atom in mol.GetAtoms():
+                atom_features_list.append(atom_to_feature_vector(atom))
+            x = np.array(atom_features_list, dtype=np.int64)
+            # bonds
+            edges_list = []
+            edge_features_list = []
+            for bond in mol.GetBonds():
+                i = bond.GetBeginAtomIdx()
+                j = bond.GetEndAtomIdx()
+
+                edge_feature = bond_to_feature_vector(bond)
+
+                # add edges in both directions
+                edges_list.append((i, j))
+                edge_features_list.append(edge_feature)
+                edges_list.append((j, i))
+                edge_features_list.append(edge_feature)
+
+            edge_index = np.array(edges_list, dtype=np.int64).T
+            edge_attr = np.array(edge_features_list, dtype=np.int64)
+            
+            
+            data.x = torch.from_numpy(x).to(torch.int64)
+            data.edge_index = torch.from_numpy(edge_index).to(torch.int64)
+            data.edge_attr = torch.from_numpy(edge_attr).to(torch.int64)
+            
+            data.smiles_ori = row['SMILES']
+            data.smiles, data.mask = drug2emb_encoder(row['SMILES'])
+            data.id = row['ID']
+
+            data_list.append(data)
+
+
+        data, slices = self.collate(data_list)
+        print("Saving...")
+        torch.save((data, slices), self.processed_paths[0])
 
 
 if __name__ == "__main__":
