@@ -188,7 +188,7 @@ class CL_model(nn.Module):
         self.gelu = nn.GELU()
         self.dropout = nn.Dropout(0.2)
         
-    def forward(self, batch):
+    def forward(self, batch, get_emb=False):
         emb_2d_low, emb_2d_high, emb_1d_low, emb_1d_high = self.cl_model(batch)  
 
         # low and high
@@ -201,8 +201,10 @@ class CL_model(nn.Module):
         out = self.dropout(self.relu(self.line1(out_2d)))
         out = self.dropout(self.relu(self.line2(out)))
         out = self.pre(out)
-
-        return out
+        if get_emb:
+            return out, out_1d, out_2d
+        else: 
+            return out
 
 class Transformer_E(nn.Sequential):
     def __init__(self):
